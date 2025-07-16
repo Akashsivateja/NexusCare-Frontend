@@ -1,10 +1,7 @@
-<<<<<<< HEAD
-const backendURL = "https://cloudvault-backend-1-votf.onrender.com"; // 🔁 Replace with your actual Render backend URL
-=======
 /* START OF FILE dashboard.js */
 
 const backendURL = "https://your-backend-url.onrender.com"; // 🔁 Replace with your actual Render backend URL
->>>>>>> 07ef724 (Intial commit)
+
 const token = localStorage.getItem("token");
 const userRole = localStorage.getItem("userRole");
 const userName = localStorage.getItem("userName");
