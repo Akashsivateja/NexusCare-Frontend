@@ -1,4 +1,6 @@
+/* START OF FILE styles.css */
 
+/* Global Resets & Variables */
 :root {
   --primary-color: #4a90e2; /* Blue */
   --secondary-color: #50e3c2; /* Green-ish */
@@ -73,7 +75,6 @@ input,
 select,
 button,
 textarea {
-  /* Added textarea */
   font-family: "Roboto", sans-serif;
   font-size: 1rem;
 }
@@ -95,7 +96,6 @@ input[type="password"],
 input[type="file"],
 select,
 textarea {
-  /* Added textarea */
   width: 100%;
   padding: 12px 15px;
   margin: 0; /* Remove default margin */
@@ -114,7 +114,6 @@ input[type="file"] {
 input:focus,
 select:focus,
 textarea:focus {
-  /* Added textarea */
   outline: none;
   border-color: var(--primary-color);
   background: #fff;
@@ -517,70 +516,32 @@ textarea:focus {
   font-size: 1rem;
 }
 
-/* Changes for dashboard main layout */
+/* 🚀 NEW LAYOUT FOR DOCTOR DASHBOARD */
 .dashboard-main {
-  /* Removed fixed grid-template-columns here */
-  display: flex; /* Use flexbox for primary layout */
-  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+  display: grid; /* Use grid for main layout */
+  grid-template-columns: 1fr; /* Default to single column for small screens */
   gap: 30px;
-  max-width: 1200px; /* Constrain overall width */
+  max-width: 1200px;
   margin: 30px auto;
   padding: 0 20px;
+  align-items: start; /* Align grid items to the start of their area */
 }
 
-/* Changes for dashboard sections within the main layout */
+@media (min-width: 992px) {
+  .dashboard-main.doctor-layout { /* Apply this class to dashboard-main when doctor is logged in */
+    grid-template-columns: 1.2fr 2.8fr; /* More defined columns for doctor's two main sections */
+    gap: 30px; /* Keep gap consistent */
+  }
+  .dashboard-main.patient-layout { /* Keep previous patient layout if desired */
+      grid-template-columns: 1fr 2fr;
+  }
+}
+
 .dashboard-section {
   display: flex;
   flex-direction: column;
   gap: 30px;
-  /* Flex-grow to fill space, flex-basis to suggest initial size */
-  flex: 1 1 300px; /* Grow, shrink, initial basis of 300px for patients/requests */
-  min-width: 300px; /* Ensure a minimum width */
-}
-
-/* Specific doctor patient grid adjustments */
-.doctor-patient-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Default to single column */
-    gap: 20px;
-    flex: 1 1 100%; /* Make it take full width of its container on small screens */
-}
-
-.patient-lists-card {
-    min-width: 280px; /* Ensure this card has enough width */
-    flex: 1 1 300px; /* Adjust flex basis for the left patient list card */
-}
-
-.patient-details-card {
-    min-width: 350px; /* Ensure this card has enough width */
-    flex: 2 1 600px; /* Adjust flex basis for the right details card */
-}
-
-@media (min-width: 992px) {
-  .dashboard-main {
-    /* Re-enable grid for larger screens for precise control */
-    display: grid;
-    grid-template-columns: 1fr 2fr; /* Patient forms/lists on left, charts/data on right */
-    align-items: start; /* Align items to the top of their grid areas */
-  }
-
-  /* Specific Doctor Dashboard Grid */
-  .doctor-patient-grid {
-      grid-template-columns: 1fr 2fr; /* Left column for lists, right for details */
-      flex: none; /* Disable flex on this element when grid is active on parent */
-  }
-
-  .patient-lists-card {
-      /* No flex needed here as parent is grid */
-      flex: none;
-      grid-column: 1 / 2; /* Explicitly place in first column */
-  }
-
-  .patient-details-card {
-      /* No flex needed here as parent is grid */
-      flex: none;
-      grid-column: 2 / 3; /* Explicitly place in second column */
-  }
+  /* Removed flex properties from here to let grid control width */
 }
 
 /* Specific card styles for dashboard */
@@ -591,8 +552,8 @@ textarea:focus {
   box-shadow: var(--shadow-light);
   border: 1px solid rgba(255, 255, 255, 0.4);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  width: auto; /* Remove fixed width to allow flex/grid to control */
-  max-width: 100%; /* Ensure it doesn't overflow */
+  width: auto; /* Allow grid/flex to define width */
+  max-width: 100%; /* Ensure it fits within its container */
 }
 
 .dashboard-page .form-card:hover,
@@ -744,29 +705,21 @@ textarea:focus {
 }
 
 /* Doctor Specific UI enhancements */
-/* Removed doctor-patient-grid from here and placed within media query */
-
+/* Removed doctor-patient-grid and patient-details-card direct flex properties from here
+   as they are now controlled by the parent .dashboard-main grid.
+   Added explicit width to cards to ensure they are not squished. */
 
 .patient-lists-card {
+    /* min-width and flex rules are now handled by parent grid */
     min-width: 280px; /* Ensure this card has enough width */
-    /* Add padding/margin to give it more internal space if needed, not width directly */
 }
 
 .patient-details-card {
+    /* min-width and flex rules are now handled by parent grid */
     min-width: 350px; /* Ensure this card has enough width */
 }
 
-.doctor-patient-grid { /* Applies to section for doctor content */
-    display: flex; /* Start with flex for overall responsiveness */
-    flex-wrap: wrap;
-    gap: 30px; /* Gap between cards */
-    flex: 1 1 100%; /* Take full width of parent dashboard-main */
-    align-items: flex-start; /* Align cards to the top */
-}
-
-/* Placeholder for when no patient is selected in doctor view */
 .doctor-welcome-placeholder {
-    flex: 2 1 600px; /* Occupy the main content area */
     background: var(--card-background);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
@@ -784,6 +737,8 @@ textarea:focus {
     color: #555;
     font-size: 1.1rem;
     line-height: 1.5;
+    /* Take full width in its grid cell */
+    width: 100%;
 }
 .doctor-welcome-placeholder h4 {
     color: var(--primary-color);
@@ -882,18 +837,14 @@ textarea:focus {
   .dashboard-main {
     padding: 0 15px;
     margin: 20px auto;
-  }
-  .dashboard-page .card-title {
-    font-size: 1.2rem;
-  }
-  .doctor-patient-grid {
     grid-template-columns: 1fr; /* Stack on smaller screens */
   }
   /* Ensure cards take full width on smaller screens */
   .patient-lists-card,
   .patient-details-card,
   .doctor-welcome-placeholder {
-      flex: 1 1 100%;
+      width: 100%; /* Take full width on small screens */
+      margin: 20px 0; /* Add back vertical margin for stacking */
   }
 }
 
@@ -915,3 +866,4 @@ textarea:focus {
     padding: 10px 15px;
   }
 }
+/* END OF FILE styles.css */
