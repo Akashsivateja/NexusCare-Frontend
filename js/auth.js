@@ -1,10 +1,5 @@
-<<<<<<< HEAD
-const backendURL = "https://cloudvault-backend-1-votf.onrender.com"; // 🔁 Replace with your actual Render backend URL
-=======
-/* START OF FILE auth.js */
+const backendURL = "https://nexuscare-backend.onrender.com"; // 🔁 Replace with your actual Render backend URL
 
-const backendURL = "https://your-backend-url.onrender.com"; // 🔁 Replace with your actual Render backend URL
->>>>>>> 07ef724 (Intial commit)
 
 function showNotification(message, type = "success") {
   const container = document.getElementById("notification-container");
