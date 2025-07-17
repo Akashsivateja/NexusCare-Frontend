@@ -1,6 +1,6 @@
 /* START OF FILE dashboard.js */
 
-const backendURL = "https://your-backend-url.onrender.com"; // 🔁 Replace with your actual Render backend URL
+const backendURL = "https://nexuscare-backend.onrender.com"; // 🔁 Replace with your actual Render backend URL
 
 const token = localStorage.getItem("token");
 const userRole = localStorage.getItem("userRole");
