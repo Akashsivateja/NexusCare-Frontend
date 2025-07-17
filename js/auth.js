@@ -1,5 +1,4 @@
-const backendURL = "https://nexuscare-backend.onrender.com"; // 🔁 Replace with your actual Render backend URL
-
+const backendURL = "https://nexuscare-backend.onrender.com"; // 🔁 Ensure this matches your live backend URL
 
 function showNotification(message, type = "success") {
   const container = document.getElementById("notification-container");
@@ -45,6 +44,8 @@ if (regForm) {
     const email = document.getElementById("email").value;
     const password = document.getElementById("password").value;
     const role = document.getElementById("role").value;
+    // ✅ NEW: Get the specialty value
+    const specialty = document.getElementById("specialty").value; // This will be empty for patients, which is fine
     const submitBtn = regForm.querySelector(".btn-submit");
 
     setButtonLoading(submitBtn, true);
@@ -52,7 +53,8 @@ if (regForm) {
       const res = await fetch(`${backendURL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, role }),
+        // ✅ NEW: Include specialty in the body
+        body: JSON.stringify({ name, email, password, role, specialty }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -97,6 +99,8 @@ if (loginForm) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("userRole", data.role);
         localStorage.setItem("userName", data.name);
+        // Ensure specialty is also stored for doctors during login if needed on frontend (optional for now)
+        // localStorage.setItem("userSpecialty", data.specialty || '');
         showNotification("Login successful!", "success");
         setTimeout(() => {
           window.location.href = "dashboard.html";
