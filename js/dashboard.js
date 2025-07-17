@@ -104,10 +104,12 @@ async function renderDashboardContent() {
   dashboardMain.innerHTML = '<p class="loading-text">Loading dashboard...</p>'; // Initial loading state
 
   if (userRole === "patient") {
+    // 🚀 NEW: Add class for patient layout
     dashboardMain.classList.remove("doctor-layout");
     dashboardMain.classList.add("patient-layout");
     await renderPatientDashboard(dashboardMain);
   } else if (userRole === "doctor") {
+    // 🚀 NEW: Add class for doctor layout
     dashboardMain.classList.remove("patient-layout");
     dashboardMain.classList.add("doctor-layout");
     await renderDoctorDashboard(dashboardMain);
@@ -333,11 +335,14 @@ async function renderPatientDashboard(container) {
     </section>
   `;
 
+  // Attach event listeners and fetch data for patient
   attachPatientEventListeners();
   await fetchPatientDataAndCharts(userId);
-  await fetchPatientNotes(userId); // Correct route now
+  // 🚀 FIXED: Fetch patient notes via the correct patient specific route
+  await fetchPatientNotes(userId);
   await fetchMyDoctors();
-  await fetchMyPrescriptions(userId); // Correct route now
+  // 🚀 FIXED: Fetch patient prescriptions via the correct patient specific route
+  await fetchMyPrescriptions();
 }
 
 function attachPatientEventListeners() {
@@ -600,7 +605,7 @@ async function fetchPatientNotes(patientId) {
   if (!notesList) return;
   notesList.innerHTML = '<p class="loading-text">Loading notes...</p>';
   try {
-    // ✅ FIXED: Fetch notes via the new patient specific route
+    // 🚀 FIXED: Fetch notes via the new patient specific route
     const res = await fetch(
       `${backendURL}/api/patients/${patientId}/notes`, // Corrected route
       {
@@ -682,16 +687,15 @@ async function fetchMyDoctors() {
   }
 }
 
-async function fetchMyPrescriptions(patientId) {
-  // Added patientId parameter
+async function fetchMyPrescriptions() {
   const myPrescriptionsList = document.getElementById("myPrescriptionsList");
   if (!myPrescriptionsList) return;
   myPrescriptionsList.innerHTML =
     '<p class="loading-text">Loading prescriptions...</p>';
   try {
-    // ✅ FIXED: Fetch prescriptions via the new patient specific route
+    // 🚀 FIXED: Fetch prescriptions via the new patient specific route
     const res = await fetch(
-      `${backendURL}/api/patients/${patientId}/prescriptions`,
+      `${backendURL}/api/patients/${userId}/prescriptions`,
       {
         headers: { Authorization: token },
       }
@@ -742,7 +746,13 @@ let currentSelectedPatientId = null;
 let doctorBpChartInstance, doctorSugarChartInstance, doctorHrChartInstance;
 
 async function renderDoctorDashboard(container) {
+  // Clear container first to remove "Loading dashboard..."
   container.innerHTML = "";
+
+  // 🚀 NEW: Use flex for the dashboard-main container to manage its direct children
+  // and then inner content can use grid. This provides better responsiveness.
+  // The dashboard-main will get 'doctor-layout' class from renderDashboardContent
+  // so its grid template will apply.
 
   const patientListsCardHTML = `
     <section class="dashboard-section patient-lists-card">
@@ -767,29 +777,34 @@ async function renderDoctorDashboard(container) {
     </section>
   `;
 
+  // This section will hold either the patient details card or the welcome placeholder
   const doctorMainContentHTML = `
     <section id="doctorMainContent" class="dashboard-section doctor-main-content">
         <!-- Conditional content rendered here -->
     </section>
   `;
 
+  // Append sections directly to the container to be managed by dashboard-main's grid
   container.insertAdjacentHTML("beforeend", patientListsCardHTML);
   container.insertAdjacentHTML("beforeend", doctorMainContentHTML);
 
   const doctorMainContentSection = document.getElementById("doctorMainContent");
 
+  // Retrieve selected patient from localStorage on refresh
   currentSelectedPatientId = localStorage.getItem("currentSelectedPatientId");
   const patientNameFromStorage = localStorage.getItem(
     "currentSelectedPatientName"
   );
 
   if (currentSelectedPatientId && patientNameFromStorage) {
+    // If a patient was previously selected (e.g., after refreshing), re-render their details
     await displayPatientDetailsForDoctor(
       currentSelectedPatientId,
       patientNameFromStorage,
       doctorMainContentSection
     );
   } else {
+    // Show a welcome/instruction message if no patient is selected
     doctorMainContentSection.innerHTML = `
         <div class="doctor-welcome-placeholder">
             <h4>Welcome, Doctor!</h4>
@@ -799,23 +814,26 @@ async function renderDoctorDashboard(container) {
     `;
   }
 
-  attachDoctorStaticEventListeners();
+  // Attach event listeners and fetch data for doctor (excluding those handled dynamically)
+  attachDoctorStaticEventListeners(); // New function for static elements
   await fetchPendingConsultations();
   await fetchMyPatients();
 }
 
+// 🚀 NEW: Function to attach listeners for static doctor dashboard elements
 function attachDoctorStaticEventListeners() {
   const doctorPatientSearchInput = document.getElementById(
     "doctorPatientSearch"
   );
   const searchMyPatientBtn = document.getElementById("searchMyPatientBtn");
 
+  // Search My Patients
   if (searchMyPatientBtn) {
     searchMyPatientBtn.addEventListener("click", async () => {
       const query = doctorPatientSearchInput.value.trim();
       const myPatientsList = document.getElementById("myPatientsList");
       if (!query) {
-        await fetchMyPatients();
+        await fetchMyPatients(); // If search is empty, show all
         return;
       }
 
@@ -879,6 +897,7 @@ function displayDoctorPatients(patients, container) {
     button.addEventListener("click", (e) => {
       const id = e.target.dataset.patientId;
       const name = e.target.dataset.patientName;
+      // Store current patient info in localStorage so it persists on refresh
       localStorage.setItem("currentSelectedPatientId", id);
       localStorage.setItem("currentSelectedPatientName", name);
       const doctorMainContentSection =
@@ -1035,6 +1054,7 @@ function displayDoctorPatients(patients, container) {
     button.addEventListener("click", (e) => {
       const id = e.target.dataset.patientId;
       const name = e.target.dataset.patientName;
+      // Store current patient info in localStorage so it persists on refresh
       localStorage.setItem("currentSelectedPatientId", id);
       localStorage.setItem("currentSelectedPatientName", name);
       const doctorMainContentSection =
@@ -1044,12 +1064,13 @@ function displayDoctorPatients(patients, container) {
   });
 }
 
+// Passed targetContainer to render content directly into doctorMainContentSection
 async function displayPatientDetailsForDoctor(
   patientId,
   patientName,
   targetContainer
 ) {
-  currentSelectedPatientId = patientId;
+  currentSelectedPatientId = patientId; // Set global currentSelectedPatientId
   const patientDetailsCardHTML = `
     <div id="patientDetailsCard" class="glass-card data-card patient-details-card">
       <h3 class="card-title">Details for: <span id="currentPatientName">${patientName}</span></h3>
@@ -1120,13 +1141,16 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     </div>
   `;
 
+  // Always render into the targetContainer (doctorMainContentSection)
   if (targetContainer) {
     targetContainer.innerHTML = patientDetailsCardHTML;
   } else {
+    // Fallback error if targetContainer is somehow not passed
     console.error("Target container for patient details not found.");
     return;
   }
 
+  // 🚀 NEW: Attach listeners for the dynamically rendered elements AFTER they are in the DOM
   const closePatientDetailsBtn = document.getElementById(
     "closePatientDetailsBtn"
   );
@@ -1282,8 +1306,130 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     });
   }
 
+  // Fetch and display vitals, files, and notes for the selected patient
   await fetchPatientVitalsForDoctor(patientId);
   await fetchPatientFilesForDoctor(patientId);
-  await fetchPatientNotesForDoctor(patientId);
+  await fetchPatientNotesForDoctor(patientId); // Correctly fetching notes from the doctor perspective
+}
+
+async function fetchPatientVitalsForDoctor(patientId) {
+  const patientVitalsList = document.getElementById("doctorPatientVitalsList");
+  if (!patientVitalsList) return;
+  patientVitalsList.innerHTML = '<p class="loading-text">Loading vitals...</p>';
+  try {
+    const res = await fetch(
+      `${backendURL}/api/doctor/patient/${patientId}/vitals`,
+      {
+        headers: { Authorization: token },
+      }
+    );
+    const vitals = await res.json();
+    if (res.ok) {
+      displayVitals(vitals, patientVitalsList); // Reuse displayVitals function
+      doctorBpChartInstance = updateChart(
+        "doctorBpChart",
+        doctorBpChartInstance,
+        vitals,
+        "Systolic BP",
+        "#4a90e2",
+        "BP (mmHg)"
+      );
+      doctorSugarChartInstance = updateChart(
+        "doctorSugarChart",
+        doctorSugarChartInstance,
+        vitals,
+        "Sugar Level",
+        "#50e3c2",
+        "Sugar (mg/dL)"
+      );
+      doctorHrChartInstance = updateChart(
+        "doctorHrChart",
+        doctorHrChartInstance,
+        vitals,
+        "Heart Rate",
+        "#ff7d7d",
+        "Heart Rate (bpm)"
+      );
+    } else {
+      patientVitalsList.innerHTML = `<p class="error-text">Error loading vitals: ${
+        vitals.error || "Unknown error"
+      }</p>`;
+    }
+  } catch (err) {
+    console.error("Error fetching doctor patient vitals:", err);
+    patientVitalsList.innerHTML =
+      '<p class="error-text">Network error loading vitals.</p>';
+  }
+}
+
+async function fetchPatientFilesForDoctor(patientId) {
+  const patientFilesList = document.getElementById("doctorPatientFilesList");
+  if (!patientFilesList) return;
+  patientFilesList.innerHTML = '<p class="loading-text">Loading files...</p>';
+  try {
+    const res = await fetch(
+      `${backendURL}/api/doctor/patient/${patientId}/files`,
+      {
+        headers: { Authorization: token },
+      }
+    );
+    const files = await res.json();
+    if (res.ok) {
+      displayFiles(files, patientFilesList); // Reuse displayFiles function
+    } else {
+      filesList.innerHTML = `<p class="error-text">Error loading files: ${
+        files.error || "Unknown error"
+      }</p>`;
+    }
+  } catch (err) {
+    console.error("Error fetching doctor patient files:", err);
+    patientFilesList.innerHTML =
+      '<p class="error-text">Network error loading files.</p>';
+  }
+}
+
+async function fetchPatientNotesForDoctor(patientId) {
+  const patientNotesList = document.getElementById("doctorPatientNotesList");
+  if (!patientNotesList) return;
+  patientNotesList.innerHTML = '<p class="loading-text">Loading notes...</p>';
+  try {
+    const res = await fetch(
+      `${backendURL}/api/doctor/patient/${patientId}/notes`,
+      {
+        headers: { Authorization: token },
+      }
+    );
+    const notes = await res.json();
+    if (res.ok) {
+      if (notes.length === 0) {
+        patientNotesList.innerHTML =
+          '<p class="loading-text">No notes for this patient yet.</p>';
+        return;
+      }
+      patientNotesList.innerHTML = notes
+        .map(
+          (note) => `
+                <div class="record-item">
+                    <span><strong>Note:</strong> ${note.content}</span>
+                    <span><strong>From:</strong> Dr. ${
+                      note.doctorId ? note.doctorId.name : "Unknown"
+                    }</span>
+                    <span class="record-date">${new Date(
+                      note.createdAt
+                    ).toLocaleString()}</span>
+                </div>
+            `
+        )
+        .join("");
+    } else {
+      patientNotesList.innerHTML = `<p class="error-text">Error loading notes: ${
+        notes.error || "Unknown error"
+      }</p>`;
+    }
+  } catch (err) {
+    console.error("Error fetching doctor patient notes:", err);
+    patientNotesList.innerHTML =
+      '<p class="error-text">Network error loading notes.</p>';
+  }
 }
 /* END OF FILE dashboard.js */
