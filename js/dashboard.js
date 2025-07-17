@@ -1,5 +1,3 @@
-/* START OF FILE dashboard.js */
-
 const backendURL = "https://nexuscare-backend.onrender.com"; // 🔁 Replace with your actual Render backend URL
 
 const token = localStorage.getItem("token");
@@ -736,97 +734,51 @@ let doctorBpChartInstance, doctorSugarChartInstance, doctorHrChartInstance;
 
 async function renderDoctorDashboard(container) {
   container.innerHTML = `
-    <section class="dashboard-section doctor-patient-grid">
-      <div class="glass-card data-card patient-lists-card">
-        <h3 class="card-title">👨‍⚕️ Your Patients & Requests</h3>
-        <h4>Pending Consultation Requests:</h4>
-        <div id="pendingConsultationsList" class="data-list mb-4">
-            <p class="loading-text">Loading requests...</p>
-        </div>
-
-        <h4>Your Consulted Patients:</h4>
-        <div class="input-group">
-            <label for="doctorPatientSearch">Search My Patients (by name or email)</label>
-            <input type="text" id="doctorPatientSearch" placeholder="Patient Name or Email" />
-            <button id="searchMyPatientBtn" class="btn btn-primary btn-sm mt-3">
-                <span>Search</span>
-                <div class="spinner hidden"></div>
-            </button>
-        </div>
-        <div id="myPatientsList" class="data-list mt-4">
-            <p class="loading-text">Loading your patients...</p>
-        </div>
+    <section class="dashboard-section patient-lists-card">
+      <h3 class="card-title">👨‍⚕️ Your Patients & Requests</h3>
+      <h4>Pending Consultation Requests:</h4>
+      <div id="pendingConsultationsList" class="data-list mb-4">
+          <p class="loading-text">Loading requests...</p>
       </div>
 
-      <div id="patientDetailsCard" class="glass-card data-card hidden patient-details-card">
-        <h3 class="card-title">Details for: <span id="currentPatientName"></span></h3>
-        <button id="closePatientDetailsBtn" class="btn btn-outline" style="position:absolute; top: 20px; right: 20px;">Close</button>
-
-        <h4>AI Health Summary</h4>
-        <button id="generateSummaryBtn" class="btn btn-secondary btn-sm mb-3">
-            <span>Generate Summary</span>
-            <div class="spinner hidden"></div>
-        </button>
-        <div id="aiSummaryBox" class="ai-summary-box hidden">
-            <h5>Generated Health Summary</h5>
-            <p id="aiSummaryContent">Loading AI summary...</p>
-        </div>
-
-
-        <div class="chart-container">
-          <h4>Blood Pressure Over Time</h4>
-          <canvas id="doctorBpChart"></canvas>
-        </div>
-        <div class="chart-container">
-          <h4>Sugar Level Over Time</h4>
-          <canvas id="doctorSugarChart"></canvas>
-        </div>
-        <div class="chart-container">
-          <h4>Heart Rate Over Time</h4>
-          <canvas id="doctorHrChart"></canvas>
-        </div>
-
-        <h4>Vitals History</h4>
-        <div id="doctorPatientVitalsList" class="data-list mb-4"></div>
-
-        <h4>Medical Files</h4>
-        <div id="doctorPatientFilesList" class="data-list mb-4"></div>
-
-        <h4>Add Note for Patient</h4>
-        <form id="addNoteForm" class="mb-4">
-          <div class="input-group">
-            <label for="noteContent">Note Content</label>
-            <textarea id="noteContent" rows="4" placeholder="Enter clinical notes here..." required></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">
-            <span>Add Note</span>
-            <div class="spinner hidden"></div>
+      <h4>Your Consulted Patients:</h4>
+      <div class="input-group">
+          <label for="doctorPatientSearch">Search My Patients (by name or email)</label>
+          <input type="text" id="doctorPatientSearch" placeholder="Patient Name or Email" />
+          <button id="searchMyPatientBtn" class="btn btn-primary btn-sm mt-3">
+              <span>Search</span>
+              <div class="spinner hidden"></div>
           </button>
-        </form>
-        <h4>Previous Notes</h4>
-        <div id="doctorPatientNotesList" class="data-list mb-4">
-            <p class="loading-text">Loading notes...</p>
-        </div>
-
-        <h4>Create Prescription</h4>
-        <form id="createPrescriptionForm">
-          <div class="input-group">
-            <label for="medications">Medications (one per line)</label>
-            <textarea id="medications" rows="6" placeholder="Paracetamol 500mg - 1 tablet 3 times a day
-Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
-          </div>
-          <div class="input-group">
-            <label for="instructions">Instructions</label>
-            <textarea id="instructions" rows="3" placeholder="Take with food. Complete the full course of antibiotics." required></textarea>
-          </div>
-          <button type="submit" class="btn btn-secondary">
-            <span>Issue Prescription</span>
-            <div class="spinner hidden"></div>
-          </button>
-        </form>
+      </div>
+      <div id="myPatientsList" class="data-list mt-4">
+          <p class="loading-text">Loading your patients...</p>
       </div>
     </section>
+
+    <section id="doctorMainContent" class="dashboard-section doctor-patient-grid">
+        <!-- Conditional content rendered here -->
+    </section>
   `;
+
+  const doctorMainContentSection = document.getElementById("doctorMainContent");
+  if (currentSelectedPatientId) {
+    // If a patient was previously selected (e.g., after refreshing), re-render their details
+    const patientName = localStorage.getItem("currentSelectedPatientName"); // Store patient name in local storage too
+    await displayPatientDetailsForDoctor(
+      currentSelectedPatientId,
+      patientName,
+      doctorMainContentSection
+    );
+  } else {
+    // Show a welcome/instruction message if no patient is selected
+    doctorMainContentSection.innerHTML = `
+        <div class="doctor-welcome-placeholder">
+            <h4>Welcome, Doctor!</h4>
+            <p>Select a patient from your lists on the left to view their health records, add notes, or issue prescriptions.</p>
+            <p>New consultation requests will appear in the 'Pending Consultation Requests' section.</p>
+        </div>
+    `;
+  }
 
   // Attach event listeners and fetch data for doctor
   attachDoctorEventListeners();
@@ -835,7 +787,7 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
 }
 
 function attachDoctorEventListeners() {
-  const patientDetailsCard = document.getElementById("patientDetailsCard");
+  const patientDetailsCard = document.getElementById("patientDetailsCard"); // This element now lives inside doctorMainContentSection
   const currentPatientName = document.getElementById("currentPatientName");
   const closePatientDetailsBtn = document.getElementById(
     "closePatientDetailsBtn"
@@ -851,164 +803,44 @@ function attachDoctorEventListeners() {
   const searchMyPatientBtn = document.getElementById("searchMyPatientBtn");
 
   // Close Patient Details
+  // This listener needs to be attached dynamically after patientDetailsCard is rendered
+  // Will be handled in displayPatientDetailsForDoctor
   if (closePatientDetailsBtn) {
+    // Check if it exists for safety, though it won't initially
     closePatientDetailsBtn.addEventListener("click", () => {
-      patientDetailsCard.classList.add("hidden");
+      // Instead of hiding, we re-render the placeholder
+      const doctorMainContentSection =
+        document.getElementById("doctorMainContent");
+      if (doctorMainContentSection) {
+        doctorMainContentSection.innerHTML = `
+                <div class="doctor-welcome-placeholder">
+                    <h4>Welcome, Doctor!</h4>
+                    <p>Select a patient from your lists on the left to view their health records, add notes, or issue prescriptions.</p>
+                    <p>New consultation requests will appear in the 'Pending Consultation Requests' section.</p>
+                </div>
+            `;
+      }
+
       currentSelectedPatientId = null;
-      // Clear charts
+      localStorage.removeItem("currentSelectedPatientId"); // Clear from local storage
+      localStorage.removeItem("currentSelectedPatientName"); // Clear from local storage
+
+      // Destroy charts
       if (doctorBpChartInstance) doctorBpChartInstance.destroy();
       if (doctorSugarChartInstance) doctorSugarChartInstance.destroy();
       if (doctorHrChartInstance) doctorHrChartInstance.destroy();
-      // Clear lists
-      document.getElementById("doctorPatientVitalsList").innerHTML = "";
-      document.getElementById("doctorPatientFilesList").innerHTML = "";
-      document.getElementById("doctorPatientNotesList").innerHTML = "";
-      document.getElementById("aiSummaryBox").classList.add("hidden");
-      document.getElementById("aiSummaryContent").textContent =
-        "Generating summary, please wait...";
 
-      // Clear forms
-      document.getElementById("noteContent").value = "";
-      document.getElementById("medications").value = "";
-      document.getElementById("instructions").value = "";
-
-      // Refresh patient list in case a new consultation was accepted
-      fetchMyPatients();
-      fetchPendingConsultations(); // Also refresh pending consultations
+      // No need to clear individual lists, as entire section is replaced
+      // document.getElementById('doctorPatientVitalsList').innerHTML = '';
+      // document.getElementById('doctorPatientFilesList').innerHTML = '';
+      // document.getElementById('doctorPatientNotesList').innerHTML = '';
     });
   }
 
   // Add Note Form Submit
-  if (addNoteForm) {
-    addNoteForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!currentSelectedPatientId) {
-        showNotification("Please select a patient first.", "warning");
-        return;
-      }
-      const noteContent = document.getElementById("noteContent").value;
-      const submitBtn = addNoteForm.querySelector(".btn-primary");
-      setButtonLoading(submitBtn, true);
-
-      try {
-        const res = await fetch(
-          `${backendURL}/api/doctor/patient/${currentSelectedPatientId}/notes`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-            body: JSON.stringify({ content: noteContent }),
-          }
-        );
-        const data = await res.json();
-        if (res.ok) {
-          showNotification(data.message, "success");
-          addNoteForm.reset();
-          await fetchPatientNotesForDoctor(currentSelectedPatientId); // Refresh notes
-        } else {
-          showNotification(data.error || "Failed to add note.", "error");
-        }
-      } catch (err) {
-        console.error("Add note error:", err);
-        showNotification("Network error. Could not add note.", "error");
-      } finally {
-        setButtonLoading(submitBtn, false);
-      }
-    });
-  }
-
-  // Create Prescription Form Submit
-  if (createPrescriptionForm) {
-    createPrescriptionForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!currentSelectedPatientId) {
-        showNotification("Please select a patient first.", "warning");
-        return;
-      }
-      const medications = document.getElementById("medications").value;
-      const instructions = document.getElementById("instructions").value;
-      const submitBtn = createPrescriptionForm.querySelector(".btn-secondary");
-      setButtonLoading(submitBtn, true);
-
-      try {
-        const res = await fetch(
-          `${backendURL}/api/doctor/patient/${currentSelectedPatientId}/prescriptions`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: token,
-            },
-            body: JSON.stringify({ medications, instructions }),
-          }
-        );
-        const data = await res.json();
-        if (res.ok) {
-          showNotification(data.message, "success");
-          createPrescriptionForm.reset();
-          // No need to refresh a list here, prescriptions are for patients
-        } else {
-          showNotification(
-            data.error || "Failed to issue prescription.",
-            "error"
-          );
-        }
-      } catch (err) {
-        console.error("Issue prescription error:", err);
-        showNotification(
-          "Network error. Could not issue prescription.",
-          "error"
-        );
-      } finally {
-        setButtonLoading(submitBtn, false);
-      }
-    });
-  }
-
-  // Generate Summary Button
-  if (generateSummaryBtn) {
-    generateSummaryBtn.addEventListener("click", async () => {
-      if (!currentSelectedPatientId) {
-        showNotification("Please select a patient first.", "warning");
-        return;
-      }
-      const summaryBox = document.getElementById("aiSummaryBox");
-      const summaryContent = document.getElementById("aiSummaryContent");
-      summaryBox.classList.remove("hidden");
-      summaryContent.textContent = "Generating summary, please wait...";
-      setButtonLoading(generateSummaryBtn, true);
-
-      try {
-        const res = await fetch(
-          `${backendURL}/api/doctor/patient/${currentSelectedPatientId}/summary`,
-          {
-            headers: { Authorization: token },
-          }
-        );
-        const data = await res.json();
-        if (res.ok) {
-          summaryContent.textContent = data.summary || "No summary generated.";
-          showNotification("Health summary generated.", "success");
-        } else {
-          summaryContent.textContent =
-            data.error || "Failed to generate summary.";
-          showNotification(
-            data.error || "Failed to generate summary.",
-            "error"
-          );
-        }
-      } catch (err) {
-        console.error("Generate summary error:", err);
-        summaryContent.textContent =
-          "Network error or server issue while generating summary.";
-        showNotification("Network error. Could not generate summary.", "error");
-      } finally {
-        setButtonLoading(generateSummaryBtn, false);
-      }
-    });
-  }
+  // This listener needs to be attached dynamically
+  // Will be handled in displayPatientDetailsForDoctor if forms exist
+  // ... (rest of form submit listeners, assuming they're handled dynamically)
 
   // Search My Patients
   if (searchMyPatientBtn) {
@@ -1203,37 +1035,264 @@ function displayDoctorPatients(patients, container) {
     button.addEventListener("click", (e) => {
       const id = e.target.dataset.patientId;
       const name = e.target.dataset.patientName;
-      displayPatientDetailsForDoctor(id, name);
+      // Store current patient info in localStorage so it persists on refresh
+      localStorage.setItem("currentSelectedPatientId", id);
+      localStorage.setItem("currentSelectedPatientName", name);
+      const doctorMainContentSection =
+        document.getElementById("doctorMainContent");
+      displayPatientDetailsForDoctor(id, name, doctorMainContentSection);
     });
   });
 }
 
-async function displayPatientDetailsForDoctor(patientId, patientName) {
+// Passed doctorMainContentSection as an argument to render content directly
+async function displayPatientDetailsForDoctor(
+  patientId,
+  patientName,
+  targetContainer
+) {
   currentSelectedPatientId = patientId;
-  const patientDetailsCard = document.getElementById("patientDetailsCard");
-  const currentPatientNameSpan = document.getElementById("currentPatientName");
+  const patientDetailsCardHTML = `
+    <div id="patientDetailsCard" class="glass-card data-card patient-details-card">
+      <h3 class="card-title">Details for: <span id="currentPatientName">${patientName}</span></h3>
+      <button id="closePatientDetailsBtn" class="btn btn-outline" style="position:absolute; top: 20px; right: 20px;">Close</button>
 
-  if (patientDetailsCard && currentPatientNameSpan) {
-    currentPatientNameSpan.textContent = patientName;
-    patientDetailsCard.classList.remove("hidden");
-    // Scroll to the patient details section
-    patientDetailsCard.scrollIntoView({ behavior: "smooth", block: "start" });
+      <h4>AI Health Summary</h4>
+      <button id="generateSummaryBtn" class="btn btn-secondary btn-sm mb-3">
+          <span>Generate Summary</span>
+          <div class="spinner hidden"></div>
+      </button>
+      <div id="aiSummaryBox" class="ai-summary-box hidden">
+          <h5>Generated Health Summary</h5>
+          <p id="aiSummaryContent">Loading AI summary...</p>
+      </div>
 
-    // Hide summary box initially
-    document.getElementById("aiSummaryBox").classList.add("hidden");
-    document.getElementById("aiSummaryContent").textContent =
-      "Generating summary, please wait...";
 
-    // Clear forms
-    document.getElementById("noteContent").value = "";
-    document.getElementById("medications").value = "";
-    document.getElementById("instructions").value = "";
+      <div class="chart-container">
+        <h4>Blood Pressure Over Time</h4>
+        <canvas id="doctorBpChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h4>Sugar Level Over Time</h4>
+        <canvas id="doctorSugarChart"></canvas>
+      </div>
+      <div class="chart-container">
+        <h4>Heart Rate Over Time</h4>
+        <canvas id="doctorHrChart"></canvas>
+      </div>
 
-    // Fetch and display vitals, files, and notes for the selected patient
-    await fetchPatientVitalsForDoctor(patientId);
-    await fetchPatientFilesForDoctor(patientId);
-    await fetchPatientNotesForDoctor(patientId);
+      <h4>Vitals History</h4>
+      <div id="doctorPatientVitalsList" class="data-list mb-4"></div>
+
+      <h4>Medical Files</h4>
+      <div id="doctorPatientFilesList" class="data-list mb-4"></div>
+
+      <h4>Add Note for Patient</h4>
+      <form id="addNoteForm" class="mb-4">
+        <div class="input-group">
+          <label for="noteContent">Note Content</label>
+          <textarea id="noteContent" rows="4" placeholder="Enter clinical notes here..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <span>Add Note</span>
+          <div class="spinner hidden"></div>
+        </button>
+      </form>
+      <h4>Previous Notes</h4>
+      <div id="doctorPatientNotesList" class="data-list mb-4">
+          <p class="loading-text">Loading notes...</p>
+      </div>
+
+      <h4>Create Prescription</h4>
+      <form id="createPrescriptionForm">
+        <div class="input-group">
+          <label for="medications">Medications (one per line)</label>
+          <textarea id="medications" rows="6" placeholder="Paracetamol 500mg - 1 tablet 3 times a day
+Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
+        </div>
+        <div class="input-group">
+          <label for="instructions">Instructions</label>
+          <textarea id="instructions" rows="3" placeholder="Take with food. Complete the full course of antibiotics." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-secondary">
+          <span>Issue Prescription</span>
+          <div class="spinner hidden"></div>
+        </button>
+      </form>
+    </div>
+  `;
+
+  if (targetContainer) {
+    targetContainer.innerHTML = patientDetailsCardHTML;
+  } else {
+    // Fallback if targetContainer not provided (shouldn't happen with updated logic)
+    const patientDetailsCard = document.getElementById("patientDetailsCard");
+    if (patientDetailsCard)
+      patientDetailsCard.innerHTML = patientDetailsCardHTML;
   }
+
+  // Re-attach event listeners for the dynamically rendered elements
+  const closeBtn = document.getElementById("closePatientDetailsBtn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      const mainContent = document.getElementById("doctorMainContent");
+      if (mainContent) {
+        mainContent.innerHTML = `
+                  <div class="doctor-welcome-placeholder">
+                      <h4>Welcome, Doctor!</h4>
+                      <p>Select a patient from your lists on the left to view their health records, add notes, or issue prescriptions.</p>
+                      <p>New consultation requests will appear in the 'Pending Consultation Requests' section.</p>
+                  </div>
+              `;
+      }
+      currentSelectedPatientId = null;
+      localStorage.removeItem("currentSelectedPatientId");
+      localStorage.removeItem("currentSelectedPatientName");
+      if (doctorBpChartInstance) doctorBpChartInstance.destroy();
+      if (doctorSugarChartInstance) doctorSugarChartInstance.destroy();
+      if (doctorHrChartInstance) doctorHrChartInstance.destroy();
+    });
+  }
+
+  // Re-attach listeners for forms within the dynamically loaded content
+  const addNoteForm = document.getElementById("addNoteForm");
+  if (addNoteForm) {
+    addNoteForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentSelectedPatientId) {
+        showNotification("Please select a patient first.", "warning");
+        return;
+      }
+      const noteContent = document.getElementById("noteContent").value;
+      const submitBtn = addNoteForm.querySelector(".btn-primary");
+      setButtonLoading(submitBtn, true);
+      try {
+        const res = await fetch(
+          `${backendURL}/api/doctor/patient/${currentSelectedPatientId}/notes`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify({ content: noteContent }),
+          }
+        );
+        const data = await res.json();
+        if (res.ok) {
+          showNotification(data.message, "success");
+          addNoteForm.reset();
+          await fetchPatientNotesForDoctor(currentSelectedPatientId);
+        } else {
+          showNotification(data.error || "Failed to add note.", "error");
+        }
+      } catch (err) {
+        console.error("Add note error:", err);
+        showNotification("Network error. Could not add note.", "error");
+      } finally {
+        setButtonLoading(submitBtn, false);
+      }
+    });
+  }
+
+  const createPrescriptionForm = document.getElementById(
+    "createPrescriptionForm"
+  );
+  if (createPrescriptionForm) {
+    createPrescriptionForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!currentSelectedPatientId) {
+        showNotification("Please select a patient first.", "warning");
+        return;
+      }
+      const medications = document.getElementById("medications").value;
+      const instructions = document.getElementById("instructions").value;
+      const submitBtn = createPrescriptionForm.querySelector(".btn-secondary");
+      setButtonLoading(submitBtn, true);
+      try {
+        const res = await fetch(
+          `${backendURL}/api/doctor/patient/${currentSelectedPatientId}/prescriptions`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: token,
+            },
+            body: JSON.stringify({ medications, instructions }),
+          }
+        );
+        const data = await res.json();
+        if (res.ok) {
+          showNotification(data.message, "success");
+          createPrescriptionForm.reset();
+        } else {
+          showNotification(
+            data.error || "Failed to issue prescription.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error("Issue prescription error:", err);
+        showNotification(
+          "Network error. Could not issue prescription.",
+          "error"
+        );
+      } finally {
+        setButtonLoading(submitBtn, false);
+      }
+    });
+  }
+
+  const generateSummaryBtn = document.getElementById("generateSummaryBtn");
+  if (generateSummaryBtn) {
+    generateSummaryBtn.addEventListener("click", async () => {
+      if (!currentSelectedPatientId) {
+        showNotification("Please select a patient first.", "warning");
+        return;
+      }
+      const summaryBox = document.getElementById("aiSummaryBox");
+      const summaryContent = document.getElementById("aiSummaryContent");
+      summaryBox.classList.remove("hidden");
+      summaryContent.textContent = "Generating summary, please wait...";
+      setButtonLoading(generateSummaryBtn, true);
+      try {
+        const res = await fetch(
+          `${backendURL}/api/doctor/patient/${currentSelectedPatientId}/summary`,
+          {
+            headers: { Authorization: token },
+          }
+        );
+        const data = await res.json();
+        if (res.ok) {
+          summaryContent.textContent = data.summary || "No summary generated.";
+          showNotification("Health summary generated.", "success");
+        } else {
+          summaryContent.textContent =
+            data.error || "Failed to generate summary.";
+          showNotification(
+            data.error || "Failed to generate summary.",
+            "error"
+          );
+        }
+      } catch (err) {
+        console.error("Generate summary error:", err);
+        summaryContent.textContent =
+          "Network error or server issue while generating summary.";
+        showNotification("Network error. Could not generate summary.", "error");
+      } finally {
+        setButtonLoading(generateSummaryBtn, false);
+      }
+    });
+  }
+
+  // Hide summary box initially
+  // document.getElementById('aiSummaryBox').classList.add('hidden');
+  // document.getElementById('aiSummaryContent').textContent = 'Generating summary, please wait...';
+
+  // Fetch and display vitals, files, and notes for the selected patient
+  await fetchPatientVitalsForDoctor(patientId);
+  await fetchPatientFilesForDoctor(patientId);
+  await fetchPatientNotesForDoctor(patientId);
 }
 
 async function fetchPatientVitalsForDoctor(patientId) {
