@@ -1,3 +1,5 @@
+/* START OF FILE dashboard.js */
+
 const backendURL = "https://nexuscare-backend.onrender.com"; // 🔁 Replace with your actual Render backend URL
 
 const token = localStorage.getItem("token");
@@ -102,8 +104,14 @@ async function renderDashboardContent() {
   dashboardMain.innerHTML = '<p class="loading-text">Loading dashboard...</p>'; // Initial loading state
 
   if (userRole === "patient") {
+    // 🚀 NEW: Add class for patient layout
+    dashboardMain.classList.remove("doctor-layout");
+    dashboardMain.classList.add("patient-layout");
     await renderPatientDashboard(dashboardMain);
   } else if (userRole === "doctor") {
+    // 🚀 NEW: Add class for doctor layout
+    dashboardMain.classList.remove("patient-layout");
+    dashboardMain.classList.add("doctor-layout");
     await renderDoctorDashboard(dashboardMain);
   } else {
     showNotification("Unknown user role. Please log in again.", "error");
@@ -330,8 +338,10 @@ async function renderPatientDashboard(container) {
   // Attach event listeners and fetch data for patient
   attachPatientEventListeners();
   await fetchPatientDataAndCharts(userId);
-  await fetchPatientNotes(userId); // Fetch notes for the patient
+  // 🚀 FIXED: Fetch patient notes via the correct patient specific route
+  await fetchPatientNotes(userId);
   await fetchMyDoctors();
+  // 🚀 FIXED: Fetch patient prescriptions via the correct patient specific route
   await fetchMyPrescriptions();
 }
 
@@ -595,10 +605,10 @@ async function fetchPatientNotes(patientId) {
   if (!notesList) return;
   notesList.innerHTML = '<p class="loading-text">Loading notes...</p>';
   try {
+    // 🚀 FIXED: Fetch notes via the new patient specific route
     const res = await fetch(
-      `${backendURL}/api/doctor/patient/${patientId}/notes`,
+      `${backendURL}/api/patients/${patientId}/notes`, // Corrected route
       {
-        // Using doctor route for notes
         headers: { Authorization: token },
       }
     );
@@ -683,10 +693,13 @@ async function fetchMyPrescriptions() {
   myPrescriptionsList.innerHTML =
     '<p class="loading-text">Loading prescriptions...</p>';
   try {
-    const res = await fetch(`${backendURL}/api/doctor/my-prescriptions`, {
-      // Doctor's endpoint to get prescriptions
-      headers: { Authorization: token },
-    });
+    // 🚀 FIXED: Fetch prescriptions via the new patient specific route
+    const res = await fetch(
+      `${backendURL}/api/patients/${userId}/prescriptions`,
+      {
+        headers: { Authorization: token },
+      }
+    );
     const prescriptions = await res.json();
     if (res.ok) {
       if (prescriptions.length === 0) {
@@ -733,7 +746,15 @@ let currentSelectedPatientId = null;
 let doctorBpChartInstance, doctorSugarChartInstance, doctorHrChartInstance;
 
 async function renderDoctorDashboard(container) {
-  container.innerHTML = `
+  // Clear container first to remove "Loading dashboard..."
+  container.innerHTML = "";
+
+  // 🚀 NEW: Use flex for the dashboard-main container to manage its direct children
+  // and then inner content can use grid. This provides better responsiveness.
+  // The dashboard-main will get 'doctor-layout' class from renderDashboardContent
+  // so its grid template will apply.
+
+  const patientListsCardHTML = `
     <section class="dashboard-section patient-lists-card">
       <h3 class="card-title">👨‍⚕️ Your Patients & Requests</h3>
       <h4>Pending Consultation Requests:</h4>
@@ -754,19 +775,32 @@ async function renderDoctorDashboard(container) {
           <p class="loading-text">Loading your patients...</p>
       </div>
     </section>
+  `;
 
-    <section id="doctorMainContent" class="dashboard-section doctor-patient-grid">
+  // This section will hold either the patient details card or the welcome placeholder
+  const doctorMainContentHTML = `
+    <section id="doctorMainContent" class="dashboard-section doctor-main-content">
         <!-- Conditional content rendered here -->
     </section>
   `;
 
+  // Append sections directly to the container to be managed by dashboard-main's grid
+  container.insertAdjacentHTML("beforeend", patientListsCardHTML);
+  container.insertAdjacentHTML("beforeend", doctorMainContentHTML);
+
   const doctorMainContentSection = document.getElementById("doctorMainContent");
-  if (currentSelectedPatientId) {
+
+  // Retrieve selected patient from localStorage on refresh
+  currentSelectedPatientId = localStorage.getItem("currentSelectedPatientId");
+  const patientNameFromStorage = localStorage.getItem(
+    "currentSelectedPatientName"
+  );
+
+  if (currentSelectedPatientId && patientNameFromStorage) {
     // If a patient was previously selected (e.g., after refreshing), re-render their details
-    const patientName = localStorage.getItem("currentSelectedPatientName"); // Store patient name in local storage too
     await displayPatientDetailsForDoctor(
       currentSelectedPatientId,
-      patientName,
+      patientNameFromStorage,
       doctorMainContentSection
     );
   } else {
@@ -780,67 +814,18 @@ async function renderDoctorDashboard(container) {
     `;
   }
 
-  // Attach event listeners and fetch data for doctor
-  attachDoctorEventListeners();
+  // Attach event listeners and fetch data for doctor (excluding those handled dynamically)
+  attachDoctorStaticEventListeners(); // New function for static elements
   await fetchPendingConsultations();
   await fetchMyPatients();
 }
 
-function attachDoctorEventListeners() {
-  const patientDetailsCard = document.getElementById("patientDetailsCard"); // This element now lives inside doctorMainContentSection
-  const currentPatientName = document.getElementById("currentPatientName");
-  const closePatientDetailsBtn = document.getElementById(
-    "closePatientDetailsBtn"
-  );
-  const addNoteForm = document.getElementById("addNoteForm");
-  const createPrescriptionForm = document.getElementById(
-    "createPrescriptionForm"
-  );
-  const generateSummaryBtn = document.getElementById("generateSummaryBtn");
+// 🚀 NEW: Function to attach listeners for static doctor dashboard elements
+function attachDoctorStaticEventListeners() {
   const doctorPatientSearchInput = document.getElementById(
     "doctorPatientSearch"
   );
   const searchMyPatientBtn = document.getElementById("searchMyPatientBtn");
-
-  // Close Patient Details
-  // This listener needs to be attached dynamically after patientDetailsCard is rendered
-  // Will be handled in displayPatientDetailsForDoctor
-  if (closePatientDetailsBtn) {
-    // Check if it exists for safety, though it won't initially
-    closePatientDetailsBtn.addEventListener("click", () => {
-      // Instead of hiding, we re-render the placeholder
-      const doctorMainContentSection =
-        document.getElementById("doctorMainContent");
-      if (doctorMainContentSection) {
-        doctorMainContentSection.innerHTML = `
-                <div class="doctor-welcome-placeholder">
-                    <h4>Welcome, Doctor!</h4>
-                    <p>Select a patient from your lists on the left to view their health records, add notes, or issue prescriptions.</p>
-                    <p>New consultation requests will appear in the 'Pending Consultation Requests' section.</p>
-                </div>
-            `;
-      }
-
-      currentSelectedPatientId = null;
-      localStorage.removeItem("currentSelectedPatientId"); // Clear from local storage
-      localStorage.removeItem("currentSelectedPatientName"); // Clear from local storage
-
-      // Destroy charts
-      if (doctorBpChartInstance) doctorBpChartInstance.destroy();
-      if (doctorSugarChartInstance) doctorSugarChartInstance.destroy();
-      if (doctorHrChartInstance) doctorHrChartInstance.destroy();
-
-      // No need to clear individual lists, as entire section is replaced
-      // document.getElementById('doctorPatientVitalsList').innerHTML = '';
-      // document.getElementById('doctorPatientFilesList').innerHTML = '';
-      // document.getElementById('doctorPatientNotesList').innerHTML = '';
-    });
-  }
-
-  // Add Note Form Submit
-  // This listener needs to be attached dynamically
-  // Will be handled in displayPatientDetailsForDoctor if forms exist
-  // ... (rest of form submit listeners, assuming they're handled dynamically)
 
   // Search My Patients
   if (searchMyPatientBtn) {
@@ -886,6 +871,40 @@ function attachDoctorEventListeners() {
       }
     });
   }
+}
+
+function displayDoctorPatients(patients, container) {
+  if (patients.length === 0) {
+    container.innerHTML =
+      '<p class="loading-text">No patients linked to your account yet.</p>';
+    return;
+  }
+  container.innerHTML =
+    "<h4>Your current patients:</h4>" +
+    patients
+      .map(
+        (patient) => `
+        <div class="record-item">
+            <span><strong>Name:</strong> ${patient.name}</span>
+            <span><strong>Email:</strong> ${patient.email}</span>
+            <button class="btn btn-secondary btn-sm view-doctor-patient-btn" data-patient-id="${patient._id}" data-patient-name="${patient.name}">View Details</button>
+        </div>
+    `
+      )
+      .join("");
+
+  document.querySelectorAll(".view-doctor-patient-btn").forEach((button) => {
+    button.addEventListener("click", (e) => {
+      const id = e.target.dataset.patientId;
+      const name = e.target.dataset.patientName;
+      // Store current patient info in localStorage so it persists on refresh
+      localStorage.setItem("currentSelectedPatientId", id);
+      localStorage.setItem("currentSelectedPatientName", name);
+      const doctorMainContentSection =
+        document.getElementById("doctorMainContent");
+      displayPatientDetailsForDoctor(id, name, doctorMainContentSection);
+    });
+  });
 }
 
 async function fetchPendingConsultations() {
@@ -1045,13 +1064,13 @@ function displayDoctorPatients(patients, container) {
   });
 }
 
-// Passed doctorMainContentSection as an argument to render content directly
+// Passed targetContainer to render content directly into doctorMainContentSection
 async function displayPatientDetailsForDoctor(
   patientId,
   patientName,
   targetContainer
 ) {
-  currentSelectedPatientId = patientId;
+  currentSelectedPatientId = patientId; // Set global currentSelectedPatientId
   const patientDetailsCardHTML = `
     <div id="patientDetailsCard" class="glass-card data-card patient-details-card">
       <h3 class="card-title">Details for: <span id="currentPatientName">${patientName}</span></h3>
@@ -1122,19 +1141,27 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     </div>
   `;
 
+  // Always render into the targetContainer (doctorMainContentSection)
   if (targetContainer) {
     targetContainer.innerHTML = patientDetailsCardHTML;
   } else {
-    // Fallback if targetContainer not provided (shouldn't happen with updated logic)
-    const patientDetailsCard = document.getElementById("patientDetailsCard");
-    if (patientDetailsCard)
-      patientDetailsCard.innerHTML = patientDetailsCardHTML;
+    // Fallback error if targetContainer is somehow not passed
+    console.error("Target container for patient details not found.");
+    return;
   }
 
-  // Re-attach event listeners for the dynamically rendered elements
-  const closeBtn = document.getElementById("closePatientDetailsBtn");
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
+  // 🚀 NEW: Attach listeners for the dynamically rendered elements AFTER they are in the DOM
+  const closePatientDetailsBtn = document.getElementById(
+    "closePatientDetailsBtn"
+  );
+  const addNoteForm = document.getElementById("addNoteForm");
+  const createPrescriptionForm = document.getElementById(
+    "createPrescriptionForm"
+  );
+  const generateSummaryBtn = document.getElementById("generateSummaryBtn");
+
+  if (closePatientDetailsBtn) {
+    closePatientDetailsBtn.addEventListener("click", () => {
       const mainContent = document.getElementById("doctorMainContent");
       if (mainContent) {
         mainContent.innerHTML = `
@@ -1154,8 +1181,6 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     });
   }
 
-  // Re-attach listeners for forms within the dynamically loaded content
-  const addNoteForm = document.getElementById("addNoteForm");
   if (addNoteForm) {
     addNoteForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1195,9 +1220,6 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     });
   }
 
-  const createPrescriptionForm = document.getElementById(
-    "createPrescriptionForm"
-  );
   if (createPrescriptionForm) {
     createPrescriptionForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -1243,7 +1265,6 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     });
   }
 
-  const generateSummaryBtn = document.getElementById("generateSummaryBtn");
   if (generateSummaryBtn) {
     generateSummaryBtn.addEventListener("click", async () => {
       if (!currentSelectedPatientId) {
@@ -1285,14 +1306,10 @@ Amoxicillin 250mg - 1 capsule twice a day" required></textarea>
     });
   }
 
-  // Hide summary box initially
-  // document.getElementById('aiSummaryBox').classList.add('hidden');
-  // document.getElementById('aiSummaryContent').textContent = 'Generating summary, please wait...';
-
   // Fetch and display vitals, files, and notes for the selected patient
   await fetchPatientVitalsForDoctor(patientId);
   await fetchPatientFilesForDoctor(patientId);
-  await fetchPatientNotesForDoctor(patientId);
+  await fetchPatientNotesForDoctor(patientId); // Correctly fetching notes from the doctor perspective
 }
 
 async function fetchPatientVitalsForDoctor(patientId) {
@@ -1360,7 +1377,7 @@ async function fetchPatientFilesForDoctor(patientId) {
     if (res.ok) {
       displayFiles(files, patientFilesList); // Reuse displayFiles function
     } else {
-      patientFilesList.innerHTML = `<p class="error-text">Error loading files: ${
+      filesList.innerHTML = `<p class="error-text">Error loading files: ${
         files.error || "Unknown error"
       }</p>`;
     }
@@ -1415,3 +1432,4 @@ async function fetchPatientNotesForDoctor(patientId) {
       '<p class="error-text">Network error loading notes.</p>';
   }
 }
+/* END OF FILE dashboard.js */
