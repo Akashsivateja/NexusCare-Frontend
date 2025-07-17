@@ -1,6 +1,4 @@
-/* START OF FILE styles.css */
 
-/* Global Resets & Variables */
 :root {
   --primary-color: #4a90e2; /* Blue */
   --secondary-color: #50e3c2; /* Green-ish */
@@ -519,25 +517,70 @@ textarea:focus {
   font-size: 1rem;
 }
 
+/* Changes for dashboard main layout */
 .dashboard-main {
-  display: grid;
-  grid-template-columns: 1fr;
+  /* Removed fixed grid-template-columns here */
+  display: flex; /* Use flexbox for primary layout */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
   gap: 30px;
-  max-width: 1200px;
+  max-width: 1200px; /* Constrain overall width */
   margin: 30px auto;
   padding: 0 20px;
 }
 
-@media (min-width: 992px) {
-  .dashboard-main {
-    grid-template-columns: 1fr 2fr; /* Two columns for larger screens */
-  }
-}
-
+/* Changes for dashboard sections within the main layout */
 .dashboard-section {
   display: flex;
   flex-direction: column;
   gap: 30px;
+  /* Flex-grow to fill space, flex-basis to suggest initial size */
+  flex: 1 1 300px; /* Grow, shrink, initial basis of 300px for patients/requests */
+  min-width: 300px; /* Ensure a minimum width */
+}
+
+/* Specific doctor patient grid adjustments */
+.doctor-patient-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Default to single column */
+    gap: 20px;
+    flex: 1 1 100%; /* Make it take full width of its container on small screens */
+}
+
+.patient-lists-card {
+    min-width: 280px; /* Ensure this card has enough width */
+    flex: 1 1 300px; /* Adjust flex basis for the left patient list card */
+}
+
+.patient-details-card {
+    min-width: 350px; /* Ensure this card has enough width */
+    flex: 2 1 600px; /* Adjust flex basis for the right details card */
+}
+
+@media (min-width: 992px) {
+  .dashboard-main {
+    /* Re-enable grid for larger screens for precise control */
+    display: grid;
+    grid-template-columns: 1fr 2fr; /* Patient forms/lists on left, charts/data on right */
+    align-items: start; /* Align items to the top of their grid areas */
+  }
+
+  /* Specific Doctor Dashboard Grid */
+  .doctor-patient-grid {
+      grid-template-columns: 1fr 2fr; /* Left column for lists, right for details */
+      flex: none; /* Disable flex on this element when grid is active on parent */
+  }
+
+  .patient-lists-card {
+      /* No flex needed here as parent is grid */
+      flex: none;
+      grid-column: 1 / 2; /* Explicitly place in first column */
+  }
+
+  .patient-details-card {
+      /* No flex needed here as parent is grid */
+      flex: none;
+      grid-column: 2 / 3; /* Explicitly place in second column */
+  }
 }
 
 /* Specific card styles for dashboard */
@@ -548,6 +591,8 @@ textarea:focus {
   box-shadow: var(--shadow-light);
   border: 1px solid rgba(255, 255, 255, 0.4);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: auto; /* Remove fixed width to allow flex/grid to control */
+  max-width: 100%; /* Ensure it doesn't overflow */
 }
 
 .dashboard-page .form-card:hover,
@@ -699,24 +744,53 @@ textarea:focus {
 }
 
 /* Doctor Specific UI enhancements */
-.doctor-patient-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 20px;
-}
-@media (min-width: 768px) {
-  .doctor-patient-grid {
-    grid-template-columns: 1fr 1fr; /* Two columns for patient list/search and details */
-  }
-}
-.doctor-patient-grid .glass-card {
-  margin: 0; /* Remove default margin as grid handles spacing */
+/* Removed doctor-patient-grid from here and placed within media query */
+
+
+.patient-lists-card {
+    min-width: 280px; /* Ensure this card has enough width */
+    /* Add padding/margin to give it more internal space if needed, not width directly */
 }
 
-.doctor-item {
-  padding: 10px 0;
-  align-items: center;
+.patient-details-card {
+    min-width: 350px; /* Ensure this card has enough width */
 }
+
+.doctor-patient-grid { /* Applies to section for doctor content */
+    display: flex; /* Start with flex for overall responsiveness */
+    flex-wrap: wrap;
+    gap: 30px; /* Gap between cards */
+    flex: 1 1 100%; /* Take full width of parent dashboard-main */
+    align-items: flex-start; /* Align cards to the top */
+}
+
+/* Placeholder for when no patient is selected in doctor view */
+.doctor-welcome-placeholder {
+    flex: 2 1 600px; /* Occupy the main content area */
+    background: var(--card-background);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--shadow-deep);
+    padding: 30px;
+    margin: 0; /* Override default card margin */
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px; /* Give it some height */
+    color: #555;
+    font-size: 1.1rem;
+    line-height: 1.5;
+}
+.doctor-welcome-placeholder h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
 
 .consultation-request-item {
   background-color: #fffde7; /* Light yellow for pending requests */
@@ -814,6 +888,12 @@ textarea:focus {
   }
   .doctor-patient-grid {
     grid-template-columns: 1fr; /* Stack on smaller screens */
+  }
+  /* Ensure cards take full width on smaller screens */
+  .patient-lists-card,
+  .patient-details-card,
+  .doctor-welcome-placeholder {
+      flex: 1 1 100%;
   }
 }
 
